@@ -28,14 +28,15 @@
 
         .header {
             background-color: #2d2d2d;
-            padding: 15px;
+            padding: 10px;
             text-align: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
         .header h1 {
-            font-size: 20px;
+            font-size: 18px;
             color: #ff6b35;
+            margin: 0;
         }
 
         .camera-container {
@@ -111,11 +112,12 @@
 
         .controls {
             background-color: #2d2d2d;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             justify-content: space-around;
             align-items: center;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
+            min-height: 80px;
         }
 
         button {
@@ -172,6 +174,8 @@
             padding: 20px;
             font-size: 16px;
             color: #ccc;
+            max-width: 90%;
+            margin: 0 auto;
         }
 
         .hidden {
@@ -219,7 +223,9 @@
 
         <div class="camera-container">
             <div class="message" id="message">
-                Druk "Begin Kamera" om te begin
+                <strong>Kamera Toestemming Nodig</strong><br><br>
+                Wanneer jy op "Begin Kamera" druk, sal die browser vir toestemming vra.<br><br>
+                ✅ Kies "Allow" of "Toelaat"
             </div>
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
@@ -261,14 +267,25 @@
         // Begin kamera
         startButton.addEventListener('click', async () => {
             try {
-                // Probeer agter kamera kry (beter vir teiken skiet)
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: { ideal: 'environment' },
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    }
-                });
+                // Probeer eers met agter kamera
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: { ideal: 'environment' },
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 }
+                        }
+                    });
+                } catch (err) {
+                    // As agter kamera nie werk nie, probeer enige kamera
+                    console.log('Agter kamera nie beskikbaar nie, probeer enige kamera...');
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 }
+                        }
+                    });
+                }
 
                 video.srcObject = stream;
                 message.classList.add('hidden');
@@ -280,8 +297,28 @@
                 captureButton.style.display = 'block';
             } catch (error) {
                 console.error('Fout met kamera toegang:', error);
-                message.textContent = 'Kon nie kamera oopmaak nie. Maak seker die browser het toestemming.';
-                alert('Kamera fout: ' + error.message);
+                
+                let errorMessage = 'Kon nie kamera oopmaak nie. ';
+                
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMessage += '\n\n📱 Gee asseblief kamera toestemming:\n' +
+                                  '1. Gaan na jou foon se Settings\n' +
+                                  '2. Soek vir Chrome/Browser\n' +
+                                  '3. Gaan na Permissions\n' +
+                                  '4. Aktiveer Camera\n' +
+                                  '5. Herlaai hierdie bladsy';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'Geen kamera gevind nie.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage += 'Kamera is dalk besig deur ander app.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                message.textContent = errorMessage;
+                message.style.fontSize = '14px';
+                message.style.whiteSpace = 'pre-line';
+                alert(errorMessage);
             }
         });
 
