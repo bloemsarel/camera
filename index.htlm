@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="af">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Teiken Skiet Kamera</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .header {
+            background-color: #2d2d2d;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            color: #ff6b35;
+        }
+
+        .camera-container {
+            flex: 1;
+            position: relative;
+            background-color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        #photo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+        }
+
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background-color: rgba(255, 107, 53, 0.7);
+        }
+
+        .crosshair::before {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+
+        .crosshair::after {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            transform: translateX(-50%);
+        }
+
+        .crosshair-circle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 2px solid rgba(255, 107, 53, 0.7);
+            border-radius: 50%;
+        }
+
+        .controls {
+            background-color: #2d2d2d;
+            padding: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        #start-button {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #start-button:active {
+            background-color: #45a049;
+            transform: scale(0.95);
+        }
+
+        #capture-button {
+            background-color: #ff6b35;
+            color: white;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            padding: 0;
+            display: none;
+        }
+
+        #capture-button:active {
+            background-color: #e55a2b;
+            transform: scale(0.95);
+        }
+
+        #retake-button,
+        #save-button {
+            background-color: #2196F3;
+            color: white;
+            display: none;
+        }
+
+        #retake-button:active,
+        #save-button:active {
+            background-color: #0b7dda;
+            transform: scale(0.95);
+        }
+
+        .message {
+            text-align: center;
+            padding: 20px;
+            font-size: 16px;
+            color: #ccc;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #download-link {
+            display: none;
+        }
+
+        .status {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .flash.active {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Teiken Skiet Kamera</h1>
+        </div>
+
+        <div class="camera-container">
+            <div class="message" id="message">
+                Druk "Begin Kamera" om te begin
+            </div>
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+            <img id="photo" alt="Vasgevangde foto">
+            <div class="crosshair hidden" id="crosshair">
+                <div class="crosshair-circle"></div>
+            </div>
+            <div class="status hidden" id="status">Gereed om te skiet</div>
+            <div class="flash" id="flash"></div>
+        </div>
+
+        <div class="controls">
+            <button id="start-button">📷 Begin Kamera</button>
+            <button id="capture-button">📸</button>
+            <button id="retake-button">🔄 Herneem</button>
+            <button id="save-button">💾 Stoor Foto</button>
+        </div>
+    </div>
+
+    <a id="download-link" download="teiken_foto.jpg"></a>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const photo = document.getElementById('photo');
+        const startButton = document.getElementById('start-button');
+        const captureButton = document.getElementById('capture-button');
+        const retakeButton = document.getElementById('retake-button');
+        const saveButton = document.getElementById('save-button');
+        const message = document.getElementById('message');
+        const crosshair = document.getElementById('crosshair');
+        const status = document.getElementById('status');
+        const flash = document.getElementById('flash');
+        const downloadLink = document.getElementById('download-link');
+
+        let stream = null;
+        let photoCount = 1;
+
+        // Begin kamera
+        startButton.addEventListener('click', async () => {
+            try {
+                // Probeer agter kamera kry (beter vir teiken skiet)
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+
+                video.srcObject = stream;
+                message.classList.add('hidden');
+                video.style.display = 'block';
+                crosshair.classList.remove('hidden');
+                status.classList.remove('hidden');
+                
+                startButton.style.display = 'none';
+                captureButton.style.display = 'block';
+            } catch (error) {
+                console.error('Fout met kamera toegang:', error);
+                message.textContent = 'Kon nie kamera oopmaak nie. Maak seker die browser het toestemming.';
+                alert('Kamera fout: ' + error.message);
+            }
+        });
+
+        // Neem foto
+        captureButton.addEventListener('click', () => {
+            // Flash effek
+            flash.classList.add('active');
+            setTimeout(() => flash.classList.remove('active'), 200);
+
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageDataURL = canvas.toDataURL('image/jpeg', 0.95);
+            photo.src = imageDataURL;
+            
+            // Versteek video, wys foto
+            video.style.display = 'none';
+            photo.style.display = 'block';
+            crosshair.classList.add('hidden');
+            status.classList.add('hidden');
+            
+            // Verander knoppies
+            captureButton.style.display = 'none';
+            retakeButton.style.display = 'block';
+            saveButton.style.display = 'block';
+        });
+
+        // Herneem foto
+        retakeButton.addEventListener('click', () => {
+            photo.style.display = 'none';
+            video.style.display = 'block';
+            crosshair.classList.remove('hidden');
+            status.classList.remove('hidden');
+            
+            retakeButton.style.display = 'none';
+            saveButton.style.display = 'none';
+            captureButton.style.display = 'block';
+        });
+
+        // Stoor foto
+        saveButton.addEventListener('click', () => {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            downloadLink.href = photo.src;
+            downloadLink.download = `teiken_${timestamp}.jpg`;
+            downloadLink.click();
+            
+            alert(`Foto gestoor! (teiken_${timestamp}.jpg)`);
+            
+            // Gereed vir volgende foto
+            photoCount++;
+            retakeButton.click();
+        });
+
+        // Stop kamera wanneer venster toegemaak word
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
